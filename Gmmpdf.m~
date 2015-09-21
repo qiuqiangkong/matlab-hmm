@@ -1,0 +1,18 @@
+% SUMMARY: Calculate probability of gauss mix model
+% AUTHOR:  QIUQIANG KONG, Queen Mary University of London
+% Created: 19-09-2015
+% Modified: - 
+% -----------------------------------------------------------
+% input
+%   X               input data; size: N*p; dim 1: num of data, dim 
+%   pi              prior of mix; size: M*1
+% output
+% ===========================================================
+function probs = Gmmpdf(X, pi, mu, Sigma)
+N = size(X,1);
+M = length(pi);
+probs = zeros(N,1);
+for i1 = 1:M
+    probs = probs + pi(i1) * mvnpdf(X, mu(:,i1)', Sigma(:,:,i1));
+end
+end

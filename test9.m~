@@ -1,0 +1,15 @@
+function test9
+x = 1;
+Add(x, 'a1', 1, 'a2', 2)
+end
+
+function Add(x, varargin)
+for i1 = 1:2:length(varargin)
+    switch varargin{i1}
+        case 'a1'
+            a1 = varargin{i1+1};
+        case 'a2'
+            a2 = varargin{i1+1};
+    end
+end
+end
