@@ -38,7 +38,7 @@ for k = 1:iter_num
         B = Discrete_p_xn_cond_zn(X, mu);   % p(xn|zn), dim 1: N, dim 2: Q
         
         % E step
-        [gamma, ita, loglik] = ForwardBackward(p_start,A,B);
+        [gamma, ita, loglik] = ForwardBackward(p_start,A,B, 'maximize', 1);
 
         % M step
         sum_p_start = sum_p_start + gamma(1,:)';

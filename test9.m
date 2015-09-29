@@ -1,5 +1,5 @@
 function test9
-x='a'
-if x=='a'
-    1
-end
+X = zeros(8,5);
+a = [2 1 3 5 4 3 3 2 ];
+b = sub2ind(size(X), 1:8, a);
+X(b) = 1;
