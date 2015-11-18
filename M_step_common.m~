@@ -1,0 +1,29 @@
+% SUMMARY:  Update p_start, A
+%           This is common for multinominal-HMM, Gauss-HMM, GMM-HMM, etc.
+% AUTHOR:   QIUQIANG KONG
+% Created:  14-11-2015
+% Modified: 17-11-2015 Add annotation
+% -----------------------------------------------------------
+% input:
+%   Gamma   p(zn|X^{(r})
+%   Ksi
+% output:
+%   p_start
+%   A
+% ===========================================================
+function [p_start, A] = M_step_common(Gamma, Ksi)
+    obj_num = length(Gamma);
+    Q = size(Gamma{1},2);
+    
+    tmp1 = zeros(1,Q);
+    for r = 1:obj_num
+        tmp1 = tmp1 + Gamma{r}(1,:);
+    end
+    p_start = tmp1 / sum(tmp1);
+    
+    tmp2 = zeros(Q,Q);
+    for r = 1:obj_num
+        tmp2 = tmp2 + reshape(sum(Ksi{r},1), Q, Q);
+    end
+    A = bsxfun(@rdivide, tmp2, sum(tmp2,2));
+end

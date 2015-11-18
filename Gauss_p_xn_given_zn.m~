@@ -1,0 +1,18 @@
+% SUMMARY:  p()
+% AUTHOR:   QIUQIANG KONG
+% Created:  
+% Modified: - 
+% -----------------------------------------------------------
+% input:
+%   
+% output:
+%   
+% ===========================================================
+function p_xn_given_zn = Gauss_p_xn_given_zn(X, phi)
+[N,p] = size(X);
+[p,Q] = size(phi.mu);
+p_xn_given_zn = zeros(N,Q);
+for i1 = 1:Q
+    p_xn_given_zn(:,i1) = mvnpdf(X, phi.mu(:,i1)', phi.Sigma(:,:,i1));
+end
+end
