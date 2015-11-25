@@ -1,7 +1,9 @@
+% THIS FILE IS OBSELETE AND REPLACED BY Discrete_logp_xn_given_zn(...)
 % SUMMARY:  Calculate p(xn|zn) of multinominal distribution
 % AUTHOR:   QIUQIANG KONG
 % Created:  12-11-2015
 % Modified: 17-11-2015 Add annotations
+%           25-11-2015 THIS FILE IS OBSELETE AND REPLACED BY Discrete_logp_xn_given_zn(...)
 % -----------------------------------------------------------
 % input:
 %   X       input data. size: N*p

@@ -64,9 +64,14 @@ pre_ll = -inf;
 for k = 1:iter_num
     % E STEP
     for r = 1:obj_num
-        p_xn_given_zn = Discrete_p_xn_given_zn(Data{r}, phi);
-        [Gamma{r}, Ksi{r}, Loglik{r}] = ForwardBackward(p_xn_given_zn, p_start, A);
+%         p_xn_given_zn = Discrete_p_xn_given_zn(Data{r}, phi);
+%         [Gamma{r}, Ksi{r}, Loglik{r}] = ForwardBackward(p_xn_given_zn, p_start, A);
+        logp_xn_given_zn = Discrete_logp_xn_given_zn(Data{r}, phi);
+        [LogGamma{r}, LogKsi{r}, Loglik{r}] = LogForwardBackward(logp_xn_given_zn, p_start, A);
     end
+    
+    % convert loggamma to gamma, logksi to ksi, substract the max
+    [Gamma, Ksi] = UniformLogGammaKsi(LogGamma, LogKsi);
 
     % M STEP common
     [p_start, A] = M_step_common(Gamma, Ksi);

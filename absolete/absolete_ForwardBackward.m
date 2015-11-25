@@ -1,3 +1,4 @@
+% THIS FILE IS ABSOLETE NOW
 % SUMMARY:  Calculate gamma=p(zn|X), ksi=p(zn,zn-1|X) using forwardbackward
 %           algorithm. This used conditional dependence of PGM. Decompose
 %           gamma as alpha.*beta

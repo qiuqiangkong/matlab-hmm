@@ -1,3 +1,4 @@
-2015.9.14 Begin write this HMM code. I try to use Murphy's and other's code but not very suitable for me. So decide to write myself. 
+2015.9.14 Begin write this HMM code. I try to use Murphy's, hmmlearn, and other's code but not very suitable. Situation like underflow occurs. So decide to write myself. 
 2015.9.29 It is not finished yet. the diecrete HMM and mono-gauss continuous GMM works well in isolated word recognition (Lab 220 dataset), 20 words. 50% accuracy using mono-gauss HMM. I do not know why mixture GMM-HMM not working well. Maybe initial values, maybe bugs. 
-
+2015.11.17 GMM-HMM fished. In Lab 220 dataset, Gauss-HMM acc is 82%, GMM-HMM acc is 84%
+2015.11.25 Package all the code. 

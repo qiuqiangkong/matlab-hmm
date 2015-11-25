@@ -63,7 +63,7 @@ if (~exist('cov_type'))
     cov_type = 'diag';      % 'full' or 'diag'
 end
 if (~exist('cov_thresh'))
-    cov_thresh = 1e-4;      % the thresh of cov
+    cov_thresh = 1e-2;      % the thresh of cov
 end
 if (~exist('converge'))
     converge = 1 + 1e-4;
@@ -74,9 +74,19 @@ obj_num = length(Data);
 for k = 1:iter_num
     % E STEP
     for r = 1:obj_num
-        p_xn_given_zn = Gauss_p_xn_given_zn(Data{r}, phi);
-        [Gamma{r}, Ksi{r}, Loglik{r}] = ForwardBackward(p_xn_given_zn, p_start, A);
+        
+%         [Gamma{r}, Ksi{r}, Loglik{r}] = ForwardBackward(p_xn_given_zn, p_start, A);
+        logp_xn_given_zn = Gauss_logp_xn_given_zn(Data{r}, phi);
+        [LogGamma{r}, LogKsi{r}, Loglik{r}] = LogForwardBackward(logp_xn_given_zn, p_start, A);
     end
+    
+%     logp_xn_given_zn
+%     1
+%     pause
+    
+    % convert loggamma to gamma, logksi to ksi, substract the max
+    [Gamma, Ksi] = UniformLogGammaKsi(LogGamma, LogKsi);
+    
     
     % M STEP common
     [p_start, A] = M_step_common(Gamma, Ksi);
@@ -101,16 +111,17 @@ for k = 1:iter_num
         end
     end
     phi.Sigma = bsxfun(@rdivide, Sigma_numer, reshape(mu_denom,1,1,Q));
+%     LogGamma{r}
     
     for i1 = 1:Q
         if (cov_type=='diag')
             phi.Sigma(:,:,i1) = diag(diag(phi.Sigma(:,:,i1)));
         end
-        if max(max(phi.Sigma(:,:,i1))) < cov_thresh    % prevent cov from being too small
-            phi.Sigma(:,:,i1) = cov_thresh * eye(p);
+        if min(eig(phi.Sigma(:,:,i1))) < cov_thresh    % prevent cov from being too small
+            phi.Sigma(:,:,i1) = phi.Sigma(:,:,i1) + cov_thresh * eye(p);
         end
     end
-
+    
     % loglik
     loglik = 0;
     for r = 1:obj_num
@@ -118,5 +129,8 @@ for k = 1:iter_num
     end
     if (loglik-pre_ll<log(converge)) break;
     else pre_ll = loglik; end    
+    
+
 end
+
 end

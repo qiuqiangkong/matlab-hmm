@@ -1,7 +1,7 @@
 % SUMMARY:  Train Gauss-HMM model
 % AUTHOR:   QIUQIANG KONG
 % Created:  17-11-2015
-% Modified: - 
+% Modified: 25-11-2015 Add annotation
 % -----------------------------------------------------------
 % input:
 %   Data        cell of data
@@ -35,10 +35,8 @@ for i1 = 1:2:length(varargin)
             p_start = varargin{i1+1};
         case 'A0'
             A = varargin{i1+1};
-        case 'B0'
-            B = varargin{i1+1};
         case 'phi0'
-            phi = phi0;
+            phi = varargin{i1+1};
         case 'cov_type'
             cov_type = varargin{i1+1};
         case 'cov_thresh'
@@ -83,11 +81,17 @@ obj_num = length(Data);
 for k = 1:iter_num
     % E STEP
     for r = 1:obj_num
-        p_xn_given_zn = Gmm_p_xn_given_zn(Data{r}, phi);
-        [Gamma{r}, Ksi{r}, Loglik{r}] = ForwardBackward(p_xn_given_zn, p_start, A);
-        p_xn_given_vn = Get_p_xn_given_vn(Data{r}, phi);
-        Ita{r} = CalculateIta(p_xn_given_vn, p_start, A, phi);
+        logp_xn_given_zn = Gmm_logp_xn_given_zn(Data{r}, phi);
+        [LogGamma{r}, LogKsi{r}, Loglik{r}] = LogForwardBackward(logp_xn_given_zn, p_start, A);
+        logp_xn_given_vn = Get_logp_xn_given_vn(Data{r}, phi);
+        LogIta{r} = CalculateLogIta(logp_xn_given_vn, p_start, A, phi);
     end
+    
+    % convert loggamma to gamma, logksi to ksi, substract the max
+    [Gamma, Ksi] = UniformLogGammaKsi(LogGamma, LogKsi);
+    
+    % convert logita to ita, substract the max
+    Ita = UniformLogIta(LogIta);
     
     % M STEP common
     [p_start, A] = M_step_common(Gamma, Ksi);
@@ -125,8 +129,8 @@ for k = 1:iter_num
             if (cov_type=='diag')
                 phi.Sigma(:,:,m,q) = diag(diag(phi.Sigma(:,:,m,q)));
             end
-            if max(max(phi.Sigma(:,:,m,q))) < cov_thresh    % prevent cov from being too small
-                phi.Sigma(:,:,m,q) = cov_thresh * eye(p);
+            if min(eig(phi.Sigma(:,:,m,q))) < cov_thresh    % prevent cov from being too small
+                phi.Sigma(:,:,m,q) = phi.Sigma(:,:,m,q) + cov_thresh * eye(p);
             end
         end
     end
@@ -142,57 +146,87 @@ end
 
 end
 
-% output: p(xn|vn), size: N*M*Q
-function p_xn_given_vn = Get_p_xn_given_vn(X, phi)
+% output: ln p(xn|vn), size: N*M*Q
+function logp_xn_given_vn = Get_logp_xn_given_vn(X, phi)
     [N,p] = size(X);
     [M,Q] = size(phi.B);
-    p_xn_given_vn = zeros(N,M,Q);
+    logp_xn_given_vn = zeros(N,M,Q);
     for q = 1:Q
         for m = 1:M
-            p_xn_given_vn(:,m,q) = mvnpdf(X, phi.mu(:,m,q)', phi.Sigma(:,:,m,q));
+            x_minus_mu = bsxfun(@minus, X, phi.mu(:,m,q)');
+            logp_xn_given_vn(:,m,q) = -0.5*p*log(2*pi) - 0.5*log(det(phi.Sigma(:,:,m,q))) - 0.5 * sum(x_minus_mu * inv(phi.Sigma(:,:,m,q)) .* x_minus_mu, 2);
         end
     end
 end
 
-% output: p(vn|xn), size: N*M*Q
-function ita = CalculateIta(p_xn_given_vn, p_start, A, phi)
+% output: ln p(vn|xn), size: N*M*Q
+function logita = CalculateLogIta(logp_xn_given_vn, p_start, A, phi)
+    [N,M,Q] = size(logp_xn_given_vn);
+    
     % reserve space
-    [N,M,Q] = size(p_xn_given_vn);
-    ita = zeros(N,M,Q);
-    alpha = zeros(N,M,Q);
-    beta = zeros(N,M,Q);
-    c = zeros(N,1);
+    logc = zeros(N,1);
+    logalpha = zeros(N,M,Q);
+    logbeta = zeros(N,M,Q);
+    logita = zeros(N,M,Q);
     
-    % calculate alpha
-    p_v1_z1_x1 = bsxfun(@times, reshape(p_xn_given_vn(1,:,:),M,Q) .* phi.B, p_start);
-    c(1) = sum(p_v1_z1_x1(:));
-    alpha(1,:,:) = p_v1_z1_x1 / c(1);
-    
+    Tmp = bsxfun( @plus, log(phi.B) + reshape(logp_xn_given_vn(1,:,:),M,Q), log(p_start) );
+    logc(1) = log( sum( sum( exp( Tmp - max(Tmp(:)) ) ) ) ) + max(Tmp(:));
+    logalpha(1,:,:) = -logc(1) + Tmp;
+    logbeta(N,:,:) = 0;
+ 
+    % calculate c, alpha
     for n = 2:N
-        Tmp3 = zeros(M,Q);
-        for m = 1:M
-            for q = 1:Q
-                tmp = bsxfun(@times, reshape(alpha(n-1,:,:),M,Q), A(:,q)');
-                Tmp3(m,q) = p_xn_given_vn(n,m,q) * phi.B(m,q) * sum(tmp(:));
+        T4 = zeros(M,Q,M,Q);    % dim 1,2: vn-1; dim 3,4: vn
+        for q = 1:Q
+            for m = 1:M
+                T4(:,:,m,q) = logp_xn_given_vn(n,m,q) + log(phi.B) + bsxfun( @plus, reshape(logalpha(n-1,:,:),M,Q), log(A(:,q)') );
             end
         end
-        c(n) = sum(Tmp3(:));
-        alpha(n,:,:) = Tmp3 / c(n);
+        tmp = exp( T4 - max(T4(:)) );
+        logc(n) = log( sum(tmp(:)) ) + max(T4(:));
+        
+        for q = 1:Q
+            for m = 1:M
+                T2 = bsxfun( @plus, reshape(logalpha(n-1,:,:),M,Q), log(A(:,q)') );
+                if isinf(max(T2(:)))
+                    logalpha(n,m,q) = -inf;
+                else
+                    logalpha(n,m,q) = -logc(n) + logp_xn_given_vn(n,m,q) + log(phi.B(m,q)) + log( sum( sum( exp( T2 - max(T2(:)) ) ) ) ) + max(T2(:));
+                end
+            end
+        end
     end
     
-    % calculate beta
-    beta(N,:,:) = 1;
     for n = N-1:-1:1
-        Tmp3 = zeros(M,Q);
-        for m = 1:M
-            for q = 1:Q
-                tmp = bsxfun(@times, reshape(beta(n+1,:,:),M,Q) .* reshape(p_xn_given_vn(n+1,:,:),M,Q) .* phi.B, A(q,:));
-                Tmp3(m,q) = sum(tmp(:));
+        for q = 1:Q
+            for m = 1:M
+                T2 = bsxfun( @plus, reshape(logbeta(n+1,:,:),M,Q) + reshape(logp_xn_given_vn(n+1,:,:),M,Q) + log(phi.B), log(A(q,:)) );
+                logbeta(n,m,q) = -logc(n+1) + log( sum( sum( exp( T2 - max(T2(:) ) ) ) ) ) + max(T2(:));
             end
         end
-        beta(n,:,:) = Tmp3 / c(n+1);
     end
     
     % calculate ita
-    ita = alpha .* beta;
+    logita = logalpha + logbeta;
+end
+
+% convert logita to ita, substract the max
+function Ita = UniformLogIta(LogIta)
+    obj_num = length(LogIta);
+    Q = size(LogIta{1}, 3);
+    for q = 1:Q
+        max_ita_ary = zeros(1, obj_num);
+        for r = 1:obj_num
+            max_ita_ary(r) = max(max(LogIta{r}(:,:,q)));
+        end
+        max_ita = max(max_ita_ary);
+        
+        for r = 1:obj_num
+            LogIta{r}(:,:,q) = LogIta{r}(:,:,q) - max_ita;
+        end
+    end
+    
+    for r = 1:obj_num
+        Ita{r} = exp(LogIta{r});
+    end
 end
