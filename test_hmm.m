@@ -2,7 +2,7 @@
 %           1.GMM, 2.Multinominal-HMM, 3.Gaussian-HMM, 4.GMM-HMM
 % AUTHOR:   QIUQIANG KONG
 % Created:  25-11-2015
-% Modified: - 
+% Modified: 11-12-2015 Add vertibi decode to GMM-HMM
 % ===========================================================
 function test_hmm
 close all
@@ -12,7 +12,7 @@ addpath('/homes/qkong/my_code2015.5-/matlab/gmm')
 % pseudo ranom
 % rng(0)
 
-choose = 2;
+choose = 4;
 
 switch choose
     case 1
@@ -161,10 +161,17 @@ p = 2;      % feature dim
 [p_start, A, phi, loglik] = ChmmGmm(Data, Q, M);
 % [p_start, A, phi, loglik] = ChmmGmm(Data, Q, M, 'p_start0', p_start0, 'A0', A0, 'phi0', phi0, 'cov_type', 'diag', 'cov_thresh', 1e-1)
 
+% Calculate p(X) & vertibi decode
+logp_xn_given_zn = Gmm_logp_xn_given_zn(Data{1}, phi);
+[~,~, loglik] = LogForwardBackward(logp_xn_given_zn, p_start, A);
+path = LogViterbiDecode(logp_xn_given_zn, p_start, A);
+
 p_start
 A
 phi
 loglik
+path'
+
 
 color = {'r', 'g', 'k'};
 for q = 1:Q
