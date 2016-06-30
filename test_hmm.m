@@ -7,7 +7,7 @@
 function test_hmm
 close all
 addpath('voicebox')
-addpath('/homes/qkong/my_code2015.5-/matlab/gmm')
+addpath('matlab-gmm')
 
 % pseudo ranom
 % rng(0)

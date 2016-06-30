@@ -5,11 +5,14 @@ CONTACT: qiuqiangkong@gmail.com
 CREATE: 25-11-2015
 ==========================================
 
+Usage:
+2. run test_hmm.m
+
+==========================================
+
 1. Providing Multinominal-HMM, Gaussian-HMM, GMM-HMM. 
 2. Underflow problem has been solved by applying log and normalization. 
 
 ==========================================
 
-Usage:
-1. Need to download gmm toolbox from github. Link: 
-2. run test_hmm.m
+
